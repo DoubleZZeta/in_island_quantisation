@@ -1,5 +1,9 @@
 # Project Description
-This project aims to explore the performance of low-bit LLMs that runs on Cerebras-like hardwares via GPU based simulation
+This project builds a GPU-based simulator for studying low-bit LLM inference on Cerebras-like spatial accelerators.
+
+The goal is to emulate the numerical behavior of Cerebras-style execution using PyTorch and Triton, so that different quantization schemes can be tested without needing to run full token generation directly on Cerebras hardware.
+
+In the current simulator, computation is mapped onto a grid of processing elements (PEs). Each PE computes a local result, and the activation-like values transferred between PEs during collective communication are quantized and later dequantized during reduction. This models communication-time in-island quantization rather than only quantizing the original input or weight tensors.
 
 # Progress
 
