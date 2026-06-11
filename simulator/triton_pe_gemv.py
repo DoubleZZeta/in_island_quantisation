@@ -1,0 +1,208 @@
+import torch
+import triton
+import triton.language as tl
+import quantization as q
+
+
+@triton.jit
+def pe_partial_gemv_kernel(
+    x_ptr, W_ptr, partial_ptr, partial_scale_ptr,
+    K: tl.constexpr,
+    N: tl.constexpr,
+    PE_COLS: tl.constexpr,
+    K_PER_PE: tl.constexpr,
+    N_PER_PE: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    PARTIAL_BITS: tl.constexpr,
+):
+    pe_row = tl.program_id(0)
+    pe_col = tl.program_id(1)
+
+    k_local = tl.arange(0, BLOCK_K)
+    n_local = tl.arange(0, BLOCK_N)
+
+    k_offsets = pe_row * K_PER_PE + k_local
+    n_offsets = pe_col * N_PER_PE + n_local
+
+    x_vals = tl.load(
+        x_ptr + k_offsets,
+        mask=(k_local < K_PER_PE) & (k_offsets < K),
+        other=0.0,
+    ).to(tl.float32)
+
+    W_vals = tl.load(
+        W_ptr + k_offsets[:, None] * N + n_offsets[None, :],
+        mask=(
+            (k_local[:, None] < K_PER_PE)
+            & (k_offsets[:, None] < K)
+            & (n_local[None, :] < N_PER_PE)
+            & (n_offsets[None, :] < N)
+        ),
+        other=0.0,
+    ).to(tl.float32)
+
+    acc = tl.sum(x_vals[:, None] * W_vals, axis=0)
+
+    partial_base = (pe_row * PE_COLS + pe_col) * BLOCK_N
+    scale_offset = pe_row * PE_COLS + pe_col
+    valid_n = (n_local < N_PER_PE) & (n_offsets < N)
+
+    scale = q.symmetric_scale_tl(acc, valid_n, PARTIAL_BITS, 1.0e-8)
+    q_acc = q.quantize_symmetric_tl(acc, scale, PARTIAL_BITS)
+
+    tl.store(partial_scale_ptr + scale_offset, scale)
+
+    tl.store(
+        partial_ptr + partial_base + n_local,
+        q_acc,
+        mask=valid_n,
+    )
+
+
+@triton.jit
+def pe_reduce_kernel(
+    partial_ptr, partial_scale_ptr, y_ptr,
+    N: tl.constexpr,
+    PE_ROWS: tl.constexpr,
+    PE_COLS: tl.constexpr,
+    N_PER_PE: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+):
+    pe_col = tl.program_id(0)
+
+    n_local = tl.arange(0, BLOCK_N)
+    n_offsets = pe_col * N_PER_PE + n_local
+
+    acc = tl.zeros((BLOCK_N,), dtype=tl.float32)
+
+    for pe_row in range(0, PE_ROWS):
+        partial_base = (pe_row * PE_COLS + pe_col) * BLOCK_N
+        scale_offset = pe_row * PE_COLS + pe_col
+        vals = tl.load(
+            partial_ptr + partial_base + n_local,
+            mask=(n_local < N_PER_PE) & (n_offsets < N),
+            other=0,
+        )
+        scale = tl.load(partial_scale_ptr + scale_offset)
+        acc += q.dequantize_symmetric_tl(vals, scale)
+
+    tl.store(
+        y_ptr + n_offsets,
+        acc,
+        mask=(n_local < N_PER_PE) & (n_offsets < N),
+    )
+
+
+def triton_pe_gemv(x, W, pe_rows=3, pe_cols=3, partial_bits=8):
+    K, N = W.shape
+
+    k_per_pe = triton.cdiv(K, pe_rows)
+    n_per_pe = triton.cdiv(N, pe_cols)
+
+    BLOCK_K = triton.next_power_of_2(k_per_pe)
+    BLOCK_N = triton.next_power_of_2(n_per_pe)
+
+    partial = torch.empty(
+        (pe_rows, pe_cols, BLOCK_N),
+        device=x.device,
+        dtype=torch.int8,
+    )
+
+    partial_scales = torch.empty(
+        (pe_rows, pe_cols),
+        device=x.device,
+        dtype=torch.float32,
+    )
+
+    y = torch.empty((N,), device=x.device, dtype=torch.float32)
+
+    pe_partial_gemv_kernel[(pe_rows, pe_cols)](
+        x, W, partial, partial_scales,
+        K, N,
+        pe_cols,
+        k_per_pe,
+        n_per_pe,
+        BLOCK_K,
+        BLOCK_N,
+        partial_bits,
+    )
+
+    pe_reduce_kernel[(pe_cols,)](
+        partial, partial_scales, y,
+        N,
+        pe_rows,
+        pe_cols,
+        n_per_pe,
+        BLOCK_N,
+    )
+
+    return y, partial, partial_scales
+
+
+def reference_quantized_pe_gemv(x, W, pe_rows=3, pe_cols=3, partial_bits=8):
+    K, N = W.shape
+    k_per_pe = triton.cdiv(K, pe_rows)
+    n_per_pe = triton.cdiv(N, pe_cols)
+
+    y = torch.zeros((N,), device=x.device, dtype=torch.float32)
+    partials = []
+    scales = []
+
+    for pe_row in range(pe_rows):
+        row_start = pe_row * k_per_pe
+        row_end = min(row_start + k_per_pe, K)
+        partial_row = []
+        scale_row = []
+
+        for pe_col in range(pe_cols):
+            col_start = pe_col * n_per_pe
+            col_end = min(col_start + n_per_pe, N)
+
+            partial_fp = x[row_start:row_end].float() @ W[row_start:row_end, col_start:col_end].float()
+            partial_q, scale = q.quantize_symmetric(partial_fp, num_bits=partial_bits)
+            y[col_start:col_end] += q.dequantize_symmetric(partial_q, scale)
+
+            partial_row.append(partial_q)
+            scale_row.append(scale)
+
+        partials.append(partial_row)
+        scales.append(torch.stack(scale_row))
+
+    return y, partials, torch.stack(scales)
+
+
+def main():
+    print(torch.cuda.device_count())
+    print(torch.cuda.get_device_name(0))
+
+    torch.manual_seed(0)
+
+    K = 64
+    N = 64
+
+    x = torch.randn((K,), device="cuda", dtype=torch.float32)
+    W = torch.randn((K, N), device="cuda", dtype=torch.float32)
+
+    partial_bits = 8
+
+    y_triton, partial, partial_scales = triton_pe_gemv(x, W, 3, 3, partial_bits)
+    y_expected, _, expected_scales = reference_quantized_pe_gemv(x, W, 3, 3, partial_bits)
+    y_fp32 = x.float() @ W.float()
+
+    print("partial shape:", partial.shape)
+    print("partial dtype:", partial.dtype)
+    print("partial scales shape:", partial_scales.shape)
+    print("max error vs quantized expected:", (y_triton - y_expected).abs().max().item())
+    print("max error vs fp32:", (y_triton - y_fp32).abs().max().item())
+    print("max scale error:", (partial_scales - expected_scales).abs().max().item())
+
+    torch.testing.assert_close(y_triton, y_expected, rtol=1e-5, atol=1e-5)
+
+    print("PASS")
+    print(y_triton[:8])
+    print(y_expected[:8])
+
+
+if __name__ == "__main__":
+    main()
