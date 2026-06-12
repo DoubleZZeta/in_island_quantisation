@@ -15,4 +15,6 @@ Went rough all the tutorials and implemented a simply quantization pipeline betw
 ## Week 2
 Just realized there is a direction shift. Installed the Triton GPU programming language due to the fact TileLang being unstable
 
-Implemented a Triton-based simulator for doing in-island quantizing GEMV operations among 3 x 3 PEs
+Implemented a Triton-based simulator for doing in-island quantizing GEMV operations among m x n PEs
+
+Implemented a test script for inspecting the accuracy of the triton quantization process
