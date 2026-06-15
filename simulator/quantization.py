@@ -99,6 +99,15 @@ def symmetric_scale_tl(x, valid_mask, num_bits: tl.constexpr, eps: tl.constexpr)
 
 
 @triton.jit
+def symmetric_scale_2d_tl(x, valid_mask, num_bits: tl.constexpr, eps: tl.constexpr):
+    qmax = (2 ** (num_bits - 1)) - 1
+    masked_abs = tl.where(valid_mask, tl.abs(x), 0.0)
+    row_max = tl.max(masked_abs, axis=1)
+    max_abs = tl.max(row_max, axis=0)
+    return tl.maximum(max_abs / qmax, eps)
+
+
+@triton.jit
 def quantize_symmetric_tl(x, scale, num_bits: tl.constexpr):
     qmin = -(2 ** (num_bits - 1))
     qmax = (2 ** (num_bits - 1)) - 1

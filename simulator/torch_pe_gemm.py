@@ -15,21 +15,38 @@ def quantized_pe_gemm(X, W, pe_dim=3, precision="int8"):
             f"Incompatible GEMM shapes: X is {tuple(X.shape)} and W is {tuple(W.shape)}"
         )
 
-    x_row_tiles = torch.tensor_split(X, pe_dim, dim=0)
-    x_tiles = [torch.tensor_split(x_row, pe_dim, dim=1) for x_row in x_row_tiles]
+    M, K = X.shape
+    _, N = W.shape
+    m_per_pe = (M + pe_dim - 1) // pe_dim
+    k_per_pe = (K + pe_dim - 1) // pe_dim
+    n_per_pe = (N + pe_dim - 1) // pe_dim
 
-    w_k_tiles = torch.tensor_split(W, pe_dim, dim=0)
-    w_tiles = [
-        torch.tensor_split(w_k, pe_dim, dim=1)
-        for w_k in w_k_tiles
-    ]
+    x_tiles = []
+    for pe_row in range(pe_dim):
+        m_start = pe_row * m_per_pe
+        m_end = min(m_start + m_per_pe, M)
+        tile_row = []
+        for k_step in range(pe_dim):
+            k_start = k_step * k_per_pe
+            k_end = min(k_start + k_per_pe, K)
+            tile_row.append(X[m_start:m_end, k_start:k_end])
+        x_tiles.append(tile_row)
 
-    m_sizes = [x_row.shape[0] for x_row in x_row_tiles]
+    w_tiles = []
+    for k_step in range(pe_dim):
+        k_start = k_step * k_per_pe
+        k_end = min(k_start + k_per_pe, K)
+        tile_row = []
+        for pe_col in range(pe_dim):
+            n_start = pe_col * n_per_pe
+            n_end = min(n_start + n_per_pe, N)
+            tile_row.append(W[k_start:k_end, n_start:n_end])
+        w_tiles.append(tile_row)
 
-    w_col_tiles = torch.tensor_split(W, pe_dim, dim=1)
-    n_sizes = [w_col.shape[1] for w_col in w_col_tiles]
+    m_sizes = [min((pe_row + 1) * m_per_pe, M) - pe_row * m_per_pe for pe_row in range(pe_dim)]
+    n_sizes = [min((pe_col + 1) * n_per_pe, N) - pe_col * n_per_pe for pe_col in range(pe_dim)]
 
-    C_tiles = [
+    Y_tiles = [
         [
             torch.zeros(
                 (m_sizes[pe_row], n_sizes[pe_col]),
@@ -50,13 +67,13 @@ def quantized_pe_gemm(X, W, pe_dim=3, precision="int8"):
                 x_available = communicate(x_source, precision)
                 w_available = communicate(w_source, precision)
 
-                C_tiles[pe_row][pe_col] += x_available @ w_available
-    
-    C = torch.cat(
-        [torch.cat(tile_row, dim=1) for tile_row in C_tiles],
+                Y_tiles[pe_row][pe_col] += x_available @ w_available
+
+    Y = torch.cat(
+        [torch.cat(tile_row, dim=1) for tile_row in Y_tiles],
         dim=0,
     )
 
-    return C
+    return Y
 
     
