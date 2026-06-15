@@ -10,18 +10,18 @@ import simulator.triton_pe_gemv as triton_pe_gemv
 
 pe_grids = [i for i in range(1,5)]
 matrix_sizes = [(64, 64), (63, 65), (128, 128), (512, 512), (512, 2048)]
-precision_bits = [4, 8]
+precisions = ["fp16", "int4", "int8"]
 
 def run_tests():
     result_path = Path(__file__).with_name("pe_gemv_results.csv")
     failures = []
 
     with result_path.open("w", newline="") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow([
             "PE Grid",
             "Matrix Size",
-            "Precision (bits)",
+            "Precision",
             "Triton vs Reference Error",
             "Quantization vs FP32 Error",
             "Scale Error",
@@ -30,17 +30,17 @@ def run_tests():
 
         for pe_grid in pe_grids:
             for matrix_size in matrix_sizes:
-                for bits in precision_bits:
-                    case = (pe_grid, matrix_size, bits)
+                for precision in precisions:
+                    case = (pe_grid, matrix_size, precision)
                     print(
                         f"Running PE Grid: {pe_grid}x{pe_grid}, "
-                        f"Matrix Size: {matrix_size}, Precision: {bits} bits"
+                        f"Matrix Size: {matrix_size}, Precision: {precision}"
                     )
                     try:
                         triton_error, quant_error, scale_error = triton_pe_gemv.main(
                             pe_rows=pe_grid,
                             pe_cols=pe_grid,
-                            partial_bits=bits,
+                            precision=precision,
                             matrix_size=matrix_size,
                             verbose=False,
                         )
@@ -56,7 +56,7 @@ def run_tests():
                     writer.writerow([
                         f"{pe_grid}x{pe_grid}",
                         f"{matrix_size[0]}x{matrix_size[1]}",
-                        bits,
+                        precision,
                         triton_error,
                         quant_error,
                         scale_error,

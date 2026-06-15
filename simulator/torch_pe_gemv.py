@@ -4,7 +4,8 @@ import triton
 import triton.language as tl
 from . import quantization as q
 
-def quantized_pe_gemv(x, W, pe_rows=3, pe_cols=3, partial_bits=8):
+def quantized_pe_gemv(x, W, pe_rows=3, pe_cols=3, precision="int8"):
+    precision = q.normalize_precision(precision)
     K, N = W.shape
     k_per_pe = triton.cdiv(K, pe_rows)
     n_per_pe = triton.cdiv(N, pe_cols)
@@ -24,13 +25,16 @@ def quantized_pe_gemv(x, W, pe_rows=3, pe_cols=3, partial_bits=8):
             col_end = min(col_start + n_per_pe, N)
 
             partial_fp = x[row_start:row_end].float() @ W[row_start:row_end, col_start:col_end].float()
-            partial_q, scale = q.quantize_symmetric(partial_fp, num_bits=partial_bits)
-            y[col_start:col_end] += q.dequantize_symmetric(partial_q, scale)
+            partial_q, scale = q.quantize(partial_fp, precision)
+            y[col_start:col_end] += q.dequantize(partial_q, scale, precision)
 
             partial_row.append(partial_q)
-            scale_row.append(scale)
+            if scale is not None:
+                scale_row.append(scale)
 
         partials.append(partial_row)
-        scales.append(torch.stack(scale_row))
+        if scale_row:
+            scales.append(torch.stack(scale_row))
 
-    return y, partials, torch.stack(scales)
+    stacked_scales = torch.stack(scales) if scales else None
+    return y, partials, stacked_scales

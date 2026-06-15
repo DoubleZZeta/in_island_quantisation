@@ -3,6 +3,50 @@ import triton
 import triton.language as tl
 
 
+SUPPORTED_PRECISIONS = ("fp16", "int8", "int4")
+
+
+def normalize_precision(precision):
+    if isinstance(precision, int):
+        precision = f"int{precision}" if precision in (4, 8) else f"fp{precision}"
+
+    precision = precision.lower()
+    if precision not in SUPPORTED_PRECISIONS:
+        raise ValueError(
+            f"Unsupported precision {precision!r}; expected one of {SUPPORTED_PRECISIONS}"
+        )
+    return precision
+
+
+def precision_num_bits(precision):
+    precision = normalize_precision(precision)
+    return 4 if precision == "int4" else 8 if precision == "int8" else None
+
+
+def precision_mode(precision):
+    precision = normalize_precision(precision)
+    return {"fp16": 0, "int4": 1, "int8": 2}[precision]
+
+
+def precision_storage_dtype(precision):
+    precision = normalize_precision(precision)
+    return torch.float16 if precision == "fp16" else torch.int8
+
+
+def quantize(x, precision="int8"):
+    precision = normalize_precision(precision)
+    if precision == "fp16":
+        return quantize_fp16(x), None
+    return quantize_symmetric(x, num_bits=precision_num_bits(precision))
+
+
+def dequantize(x, scale, precision="int8"):
+    precision = normalize_precision(precision)
+    if precision == "fp16":
+        return dequantize_fp16(x)
+    return dequantize_symmetric(x, scale)
+
+
 def signed_quant_bounds(num_bits):
     qmin = -(2 ** (num_bits - 1))
     qmax = (2 ** (num_bits - 1)) - 1
@@ -30,34 +74,17 @@ def dequantize_symmetric(q, scale):
     return q.float() * scale
 
 
-def quantize_dequantize_symmetric(x, num_bits=8, eps=1.0e-8):
-    q, scale = quantize_symmetric(x, num_bits, eps)
-    return dequantize_symmetric(q, scale), q, scale
+def quantize_fp16(x):
+    return x.to(torch.float16)
 
 
-def get_symmetric_int8_scale(x):
-    return get_symmetric_scale(x, num_bits=8)
+def dequantize_fp16(x):
+    return x.to(torch.float32)
 
 
-def quantize_symmetric_int8(x):
-    return quantize_symmetric(x, num_bits=8)
-
-
-def dequantize_symmetric_int8(q, scale):
-    return dequantize_symmetric(q, scale)
-
-
-def get_symmetric_int4_scale(x):
-    return get_symmetric_scale(x, num_bits=4)
-
-
-def quantize_symmetric_int4(x):
-    return quantize_symmetric(x, num_bits=4)
-
-
-def dequantize_symmetric_int4(q, scale):
-    return dequantize_symmetric(q, scale)
-
+def quantize_dequantize_fp16(x):
+    q = quantize_fp16(x)
+    return dequantize_fp16(q), q
 
 @triton.jit
 def round_to_nearest_tl(x):
@@ -81,3 +108,13 @@ def quantize_symmetric_tl(x, scale, num_bits: tl.constexpr):
 @triton.jit
 def dequantize_symmetric_tl(q, scale):
     return q.to(tl.float32) * scale
+
+
+@triton.jit
+def quantize_fp16_tl(x):
+    return x.to(tl.float16)
+
+
+@triton.jit
+def dequantize_fp16_tl(x):
+    return x.to(tl.float32)

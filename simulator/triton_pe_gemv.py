@@ -1,11 +1,12 @@
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import torch
 import triton
 import triton.language as tl
 from . import quantization as q
 from . import torch_pe_gemv as reference
-import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 @triton.jit
 def pe_partial_gemv_kernel(
@@ -17,7 +18,7 @@ def pe_partial_gemv_kernel(
     N_PER_PE: tl.constexpr,
     BLOCK_K: tl.constexpr,
     BLOCK_N: tl.constexpr,
-    PARTIAL_BITS: tl.constexpr,
+    QUANT_MODE: tl.constexpr,
 ):
     pe_row = tl.program_id(0)
     pe_col = tl.program_id(1)
@@ -51,10 +52,16 @@ def pe_partial_gemv_kernel(
     scale_offset = pe_row * PE_COLS + pe_col
     valid_n = (n_local < N_PER_PE) & (n_offsets < N)
 
-    scale = q.symmetric_scale_tl(acc, valid_n, PARTIAL_BITS, 1.0e-8)
-    q_acc = q.quantize_symmetric_tl(acc, scale, PARTIAL_BITS)
-
-    tl.store(partial_scale_ptr + scale_offset, scale)
+    if QUANT_MODE == 0:
+        q_acc = q.quantize_fp16_tl(acc)
+    elif QUANT_MODE == 1:
+        scale = q.symmetric_scale_tl(acc, valid_n, 4, 1.0e-8)
+        q_acc = q.quantize_symmetric_tl(acc, scale, 4)
+        tl.store(partial_scale_ptr + scale_offset, scale)
+    else:
+        scale = q.symmetric_scale_tl(acc, valid_n, 8, 1.0e-8)
+        q_acc = q.quantize_symmetric_tl(acc, scale, 8)
+        tl.store(partial_scale_ptr + scale_offset, scale)
 
     tl.store(
         partial_ptr + partial_base + n_local,
@@ -71,6 +78,7 @@ def pe_reduce_kernel(
     PE_COLS: tl.constexpr,
     N_PER_PE: tl.constexpr,
     BLOCK_N: tl.constexpr,
+    QUANT_MODE: tl.constexpr,
 ):
     pe_col = tl.program_id(0)
 
@@ -87,8 +95,11 @@ def pe_reduce_kernel(
             mask=(n_local < N_PER_PE) & (n_offsets < N),
             other=0,
         )
-        scale = tl.load(partial_scale_ptr + scale_offset)
-        acc += q.dequantize_symmetric_tl(vals, scale)
+        if QUANT_MODE == 0:
+            acc += q.dequantize_fp16_tl(vals)
+        else:
+            scale = tl.load(partial_scale_ptr + scale_offset)
+            acc += q.dequantize_symmetric_tl(vals, scale)
 
     tl.store(
         y_ptr + n_offsets,
@@ -97,7 +108,9 @@ def pe_reduce_kernel(
     )
 
 
-def triton_pe_gemv(x, W, pe_rows=3, pe_cols=3, partial_bits=8):
+def triton_pe_gemv(x, W, pe_rows=3, pe_cols=3, precision="int8"):
+    precision = q.normalize_precision(precision)
+    quant_mode = q.precision_mode(precision)
     K, N = W.shape
 
     k_per_pe = triton.cdiv(K, pe_rows)
@@ -109,40 +122,46 @@ def triton_pe_gemv(x, W, pe_rows=3, pe_cols=3, partial_bits=8):
     partial = torch.empty(
         (pe_rows, pe_cols, BLOCK_N),
         device=x.device,
-        dtype=torch.int8,
+        dtype=q.precision_storage_dtype(precision),
     )
 
-    partial_scales = torch.empty(
-        (pe_rows, pe_cols),
-        device=x.device,
-        dtype=torch.float32,
-    )
+    if precision == "fp16":
+        partial_scales = None
+        scale_buffer = torch.empty((1,), device=x.device, dtype=torch.float32)
+    else:
+        partial_scales = torch.empty(
+            (pe_rows, pe_cols),
+            device=x.device,
+            dtype=torch.float32,
+        )
+        scale_buffer = partial_scales
 
     y = torch.empty((N,), device=x.device, dtype=torch.float32)
 
     pe_partial_gemv_kernel[(pe_rows, pe_cols)](
-        x, W, partial, partial_scales,
+        x, W, partial, scale_buffer,
         K, N,
         pe_cols,
         k_per_pe,
         n_per_pe,
         BLOCK_K,
         BLOCK_N,
-        partial_bits,
+        quant_mode,
     )
 
     pe_reduce_kernel[(pe_cols,)](
-        partial, partial_scales, y,
+        partial, scale_buffer, y,
         N,
         pe_rows,
         pe_cols,
         n_per_pe,
         BLOCK_N,
+        quant_mode,
     )
 
     return y, partial, partial_scales
 
-def main(pe_rows=3, pe_cols=3, partial_bits=8, matrix_size=(64, 64), verbose=True):
+def main(pe_rows=3, pe_cols=3, precision="int8", matrix_size=(64, 64), verbose=True):
 
     if verbose:
         print(torch.cuda.device_count())
@@ -156,23 +175,31 @@ def main(pe_rows=3, pe_cols=3, partial_bits=8, matrix_size=(64, 64), verbose=Tru
     x = torch.randn((K,), device="cuda", dtype=torch.float32)
     W = torch.randn((K, N), device="cuda", dtype=torch.float32)
 
-    y_triton, partial, partial_scales = triton_pe_gemv(x, W, pe_rows, pe_cols, partial_bits)
-    y_expected, _, expected_scales = reference.quantized_pe_gemv(x, W, pe_rows, pe_cols, partial_bits)
+    precision = q.normalize_precision(precision)
+    y_triton, partial, partial_scales = triton_pe_gemv(x, W, pe_rows, pe_cols, precision)
+    y_expected, _, expected_scales = reference.quantized_pe_gemv(
+        x, W, pe_rows, pe_cols, precision
+    )
     y_fp32 = x.float() @ W.float()
 
     triton_error = (y_triton - y_expected).abs().max().item()
     quant_error = (y_expected - y_fp32).abs().max().item()
-    scale_error = (partial_scales - expected_scales).abs().max().item()
+    scale_error = None
+    if partial_scales is not None:
+        scale_error = (partial_scales - expected_scales).abs().max().item()
 
     if verbose:
         print("partial shape:", partial.shape)
         print("partial dtype:", partial.dtype)
-        print("partial scales shape:", partial_scales.shape)
+        print("partial scales shape:", None if partial_scales is None else partial_scales.shape)
         print("max error vs quantized expected:", triton_error)
         print("max error vs fp32:", quant_error)
         print("max scale error:", scale_error)
 
-    torch.testing.assert_close(y_triton, y_expected, rtol=1e-5, atol=5e-5)
+    if precision == "fp16":
+        torch.testing.assert_close(y_triton, y_expected, rtol=1e-3, atol=1e-2)
+    else:
+        torch.testing.assert_close(y_triton, y_expected, rtol=1e-5, atol=5e-5)
 
     if verbose:
         print("PASS")
