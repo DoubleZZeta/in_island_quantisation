@@ -97,7 +97,7 @@ def triton_pe_gemm(X, W, pe_dim=3, precision="int8"):
 
     BLOCK_M = triton.next_power_of_2(m_per_pe)
     BLOCK_N = triton.next_power_of_2(n_per_pe)
-    BLOCK_K = triton.next_power_of_2(k_per_pe)
+    BLOCK_K = max(16, triton.next_power_of_2(k_per_pe))
 
     Y = torch.empty((M, N), device=X.device, dtype=torch.float32)
 
@@ -117,7 +117,13 @@ def triton_pe_gemm(X, W, pe_dim=3, precision="int8"):
     return Y
 
 
-def main(pe_dim=3, precision="int8", X_matrix_size=(64, 128), W_matrix_size=(128, 64)):
+def main(pe_dim=3, precision="int8", X_matrix_size=(64, 128), W_matrix_size=(128, 64), verbose=True):
+    if verbose:
+        print(torch.cuda.device_count())
+        print(torch.cuda.get_device_name(0))
+
+    torch.manual_seed(0)
+   
     M, K = X_matrix_size
     W_K, N = W_matrix_size
 
@@ -126,19 +132,27 @@ def main(pe_dim=3, precision="int8", X_matrix_size=(64, 128), W_matrix_size=(128
             f"Incompatible GEMM shapes: X is {X_matrix_size} and W is {W_matrix_size}"
         )
 
-    torch.manual_seed(0)
-
     X = torch.randn((M, K), device="cuda", dtype=torch.float32)
     W = torch.randn((K, N), device="cuda", dtype=torch.float32)
 
-    C_triton = triton_pe_gemm(X, W, pe_dim=pe_dim, precision=precision)
-    C = reference.quantized_pe_gemm(X, W, pe_dim=pe_dim, precision=precision)
-    C_fp32 = X @ W
+    Y_triton = triton_pe_gemm(X, W, pe_dim=pe_dim, precision=precision)
+    Y_expected = reference.quantized_pe_gemm(X, W, pe_dim=pe_dim, precision=precision)
+    Y_fp32 = X @ W
 
-    print("C shape:", C.shape)
-    print("max error vs reference:", (C_triton - C).abs().max().item())
-    print("max error vs fp32:", (C - C_fp32).abs().max().item())
-    return C_triton
+    triton_error = (Y_triton - Y_expected).abs().max().item()
+    quant_error = (Y_expected - Y_fp32).abs().max().item()
+
+    if verbose:
+        print("Y shape:", Y_triton.shape)
+        print("max error vs reference:", (Y_triton - Y_expected).abs().max().item())
+        print("max error vs fp32:", (Y_expected - Y_fp32).abs().max().item())
+
+    if precision == "fp16":
+        torch.testing.assert_close(Y_triton, Y_expected, rtol=1e-3, atol=1e-2)
+    else:
+        torch.testing.assert_close(Y_triton, Y_expected, rtol=1e-5, atol=5e-5)
+
+    return triton_error, quant_error
 
 
 if __name__ == "__main__":

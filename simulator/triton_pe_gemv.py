@@ -175,7 +175,6 @@ def main(pe_rows=3, pe_cols=3, precision="int8", matrix_size=(64, 64), verbose=T
     x = torch.randn((K,), device="cuda", dtype=torch.float32)
     W = torch.randn((K, N), device="cuda", dtype=torch.float32)
 
-    precision = q.normalize_precision(precision)
     y_triton, partial, partial_scales = triton_pe_gemv(x, W, pe_rows, pe_cols, precision)
     y_expected, _, expected_scales = reference.quantized_pe_gemv(
         x, W, pe_rows, pe_cols, precision

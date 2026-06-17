@@ -5,7 +5,7 @@ The goal is to emulate the numerical behavior of Cerebras-style execution using 
 
 In the current simulator, computation is mapped onto a grid of processing elements (PEs). Each PE computes a local result, and the activation-like values transferred between PEs during collective communication are quantized and later dequantized during reduction. This models communication-time in-island quantization rather than only quantizing the original input or weight tensors.
 
-# Progress
+# Progress/Log
 
 ## Week 1
 Explored Cerebras hardware concepts and the csl programing language. 

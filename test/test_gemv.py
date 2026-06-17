@@ -20,7 +20,8 @@ def run_tests():
         writer = csv.writer(f, lineterminator="\n")
         writer.writerow([
             "PE Grid",
-            "Matrix Size",
+            "X Matrix Size",
+            "M Matrix Size",
             "Precision",
             "Triton vs Reference Error",
             "Quantization vs FP32 Error",
