@@ -50,7 +50,8 @@ def run_tests():
                         triton_error = ""
                         quant_error = ""
                         scale_error = ""
-                        status = f"FAIL: {type(error).__name__}: {error}"
+                        error_message = " ".join(str(error).split())
+                        status = f"FAIL: {type(error).__name__}: {error_message}"   
                         failures.append((case, status))
                         print(status)
 

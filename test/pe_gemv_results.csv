@@ -1,4 +1,4 @@
-PE Grid,Matrix Size,Precision,Triton vs Reference Error,Quantization vs FP32 Error,Scale Error,Status
+PE Grid,X Matrix Size,M Matrix Size,Precision,Triton vs Reference Error,Quantization vs FP32 Error,Scale Error,Status
 1x1,64x64,fp16,0.0,0.004543304443359375,,PASS
 1x1,64x64,int4,0.0,1.5150344371795654,0.0,PASS
 1x1,64x64,int8,0.0,0.08329427242279053,0.0,PASS

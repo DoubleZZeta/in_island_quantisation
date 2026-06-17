@@ -6,8 +6,8 @@ small,1x1,32x32,32x32,fp16,0.0,0.006436347961425781,PASS
 small,1x1,32x32,32x32,int4,0.0,3.8814096450805664,PASS
 small,1x1,32x32,32x32,int8,0.0,0.19877052307128906,PASS
 small,1x1,64x64,64x64,fp16,0.0,0.01201629638671875,PASS
-small,1x1,64x64,64x64,int4,,,FAIL: RuntimeError: Triton Error [CUDA]: out of memory
-small,1x1,64x64,64x64,int8,,,FAIL: RuntimeError: Triton Error [CUDA]: out of memory
+small,1x1,64x64,64x64,int4,0.0,6.393231391906738,PASS
+small,1x1,64x64,64x64,int8,0.0,0.305267333984375,PASS
 small,1x1,63x65,65x67,fp16,,,SKIP: block size exceeds 64 (64x128x128)
 small,1x1,63x65,65x67,int4,,,SKIP: block size exceeds 64 (64x128x128)
 small,1x1,63x65,65x67,int8,,,SKIP: block size exceeds 64 (64x128x128)
