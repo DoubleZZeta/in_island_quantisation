@@ -17,6 +17,11 @@ Just realized there is a direction shift. Installed the Triton GPU programming l
 
 Implemented a Triton-based simulator for doing in-island quantizing GEMV operations among m x n PEs
 
-Implemented a test script for inspecting the accuracy of the triton quantization process
+Implemented a test script for inspecting the accuracy of the triton GEMV quantization process
 
 Implemented a Triton-based simulator for doing in-island quantizing GEMM operations among n x n PEs
+
+## Week3
+Implemented a test script for inspecting the accuracy of the triton GEMM quantization process
+
+
