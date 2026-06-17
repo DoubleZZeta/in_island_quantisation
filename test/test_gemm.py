@@ -7,6 +7,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import simulator.triton_pe_gemm as triton_pe_gemm
+import torch
 
 MAX_BLOCK_SIZE = 64
 MIN_DOT_K = 16
@@ -68,6 +69,7 @@ def should_skip(m, k, n, pe_dim):
 def run_tests():
     result_path = Path(__file__).with_name("pe_gemm_results.csv")
     failures = []
+    failures_count = 0
 
     with result_path.open("w", newline="") as f:
         writer = csv.writer(f, lineterminator="\n")
@@ -130,6 +132,7 @@ def run_tests():
                             f"Blocks: {block_m}x{block_k}x{block_n}, Precision: {precision}"
                         )
                         try:
+                            torch.cuda.empty_cache()
                             triton_error, quant_error = triton_pe_gemm.main(
                                 pe_dim=pe_grid,
                                 precision=precision,
@@ -141,9 +144,13 @@ def run_tests():
                         except Exception as error:
                             triton_error = ""
                             quant_error = ""
-                            status = f"FAIL: {type(error).__name__}: {error}"
+                            error_message = " ".join(str(error).split())
+                            status = f"FAIL: {type(error).__name__}: {error_message}"
                             failures.append((case, status))
                             print(status)
+                            failures_count += 1
+                        finally:
+                            torch.cuda.empty_cache()
 
                         writer.writerow([
                             level_name,
@@ -163,7 +170,7 @@ def run_tests():
                         ])
 
     if failures:
-        raise SystemExit(f"{len(failures)} test case(s) failed; see {result_path}")
+        raise SystemExit(f"{failures_count} test case(s) failed; see {result_path}")
 
     print(f"All tests passed; results written to {result_path}")
 

@@ -121,11 +121,7 @@ large,16x16,512,512,512,512x512,512x512,int4,32,32,32,9.918212890625e-05,20.9714
 large,16x16,512,512,512,512x512,512x512,int8,32,32,32,8.392333984375e-05,1.2218189239501953,PASS
 large,16x16,512,1024,512,512x1024,1024x512,fp16,32,64,32,0.00022125244140625,0.046001434326171875,PASS
 large,16x16,512,1024,512,512x1024,1024x512,int4,32,64,32,0.00016021728515625,32.17198181152344,PASS
-large,16x16,512,1024,512,512x1024,1024x512,int8,32,64,32,,,"FAIL: AssertionError: Tensor-likes are not close!
-
-Mismatched elements: 6 / 262144 (0.0%)
-Greatest absolute difference: 9.107589721679688e-05 at index (223, 226) (up to 5e-05 allowed)
-Greatest relative difference: 0.00018815399380400777 at index (92, 18) (up to 1e-05 allowed)"
+large,16x16,512,1024,512,512x1024,1024x512,int8,32,64,32,,,"FAIL: AssertionError: Tensor-likes are not close! Mismatched elements: 6 / 262144 (0.0%) Greatest absolute difference: 9.107589721679688e-05 at index (223, 226) (up to 5e-05 allowed) Greatest relative difference: 0.00018815399380400777 at index (92, 18) (up to 1e-05 allowed)"
 large,16x16,512,2048,512,512x2048,2048x512,fp16,32,128,32,,,SKIP: block size exceeds 64 (32x128x32)
 large,16x16,512,2048,512,512x2048,2048x512,int4,32,128,32,,,SKIP: block size exceeds 64 (32x128x32)
 large,16x16,512,2048,512,512x2048,2048x512,int8,32,128,32,,,SKIP: block size exceeds 64 (32x128x32)
