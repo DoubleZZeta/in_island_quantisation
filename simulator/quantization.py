@@ -3,7 +3,7 @@ import triton
 import triton.language as tl
 
 
-SUPPORTED_PRECISIONS = ("fp16", "int8", "int4")
+SUPPORTED_PRECISIONS = ("fp32", "fp16", "int8", "int4")
 
 
 def normalize_precision(precision):
@@ -25,16 +25,20 @@ def precision_num_bits(precision):
 
 def precision_mode(precision):
     precision = normalize_precision(precision)
-    return {"fp16": 0, "int4": 1, "int8": 2}[precision]
+    return {"fp16": 0, "int4": 1, "int8": 2, "fp32": 3}[precision]
 
 
 def precision_storage_dtype(precision):
     precision = normalize_precision(precision)
+    if precision == "fp32":
+        return torch.float32
     return torch.float16 if precision == "fp16" else torch.int8
 
 
 def quantize(x, precision="int8"):
     precision = normalize_precision(precision)
+    if precision == "fp32":
+        return x.to(torch.float32), None
     if precision == "fp16":
         return quantize_fp16(x), None
     return quantize_symmetric(x, num_bits=precision_num_bits(precision))
@@ -42,6 +46,8 @@ def quantize(x, precision="int8"):
 
 def dequantize(x, scale, precision="int8"):
     precision = normalize_precision(precision)
+    if precision == "fp32":
+        return x.to(torch.float32)
     if precision == "fp16":
         return dequantize_fp16(x)
     return dequantize_symmetric(x, scale)

@@ -52,7 +52,9 @@ def pe_partial_gemv_kernel(
     scale_offset = pe_row * PE_COLS + pe_col
     valid_n = (n_local < N_PER_PE) & (n_offsets < N)
 
-    if QUANT_MODE == 0:
+    if QUANT_MODE == 3:
+        q_acc = acc
+    elif QUANT_MODE == 0:
         q_acc = q.quantize_fp16_tl(acc)
     elif QUANT_MODE == 1:
         scale = q.symmetric_scale_tl(acc, valid_n, 4, 1.0e-8)
@@ -95,7 +97,9 @@ def pe_reduce_kernel(
             mask=(n_local < N_PER_PE) & (n_offsets < N),
             other=0,
         )
-        if QUANT_MODE == 0:
+        if QUANT_MODE == 3:
+            acc += vals.to(tl.float32)
+        elif QUANT_MODE == 0:
             acc += q.dequantize_fp16_tl(vals)
         else:
             scale = tl.load(partial_scale_ptr + scale_offset)
@@ -125,7 +129,7 @@ def triton_pe_gemv(x, W, pe_rows=3, pe_cols=3, precision="int8"):
         dtype=q.precision_storage_dtype(precision),
     )
 
-    if precision == "fp16":
+    if precision in ("fp32", "fp16"):
         partial_scales = None
         scale_buffer = torch.empty((1,), device=x.device, dtype=torch.float32)
     else:
@@ -195,7 +199,9 @@ def main(pe_rows=3, pe_cols=3, precision="int8", matrix_size=(64, 64), verbose=T
         print("max error vs fp32:", quant_error)
         print("max scale error:", scale_error)
 
-    if precision == "fp16":
+    if precision == "fp32":
+        torch.testing.assert_close(y_triton, y_expected, rtol=0.0, atol=0.0)
+    elif precision == "fp16":
         torch.testing.assert_close(y_triton, y_expected, rtol=1e-3, atol=1e-2)
     else:
         torch.testing.assert_close(y_triton, y_expected, rtol=1e-5, atol=5e-5)
