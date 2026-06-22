@@ -1,6 +1,6 @@
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
 import csv
 import sys
@@ -25,10 +25,10 @@ CEREBRAS_TIMEOUT_SECONDS = 120
 
 kernel_x_dims = [i for i in range(1,11)]
 kernel_y_dims = [i for i in range(1,11)]
-# Ms = [i for i in range(16, 65, 16)]
-# Ns = [i for i in range(16, 65, 16)]
-Ms = [24]
-Ns = [32]
+Ms = [i for i in range(16, 65, 16)]
+Ns = [i for i in range(16, 65, 16)]
+# Ms = [24]
+# Ns = [32]
 
 def can_run(M, N, kernel_x_dim, kernel_y_dim):
     if kernel_x_dim < 2:
@@ -103,8 +103,7 @@ def run_tests():
                             continue
 
                         case_name = f"M{M}_N{N}_kx{kernel_x_dim}_ky{kernel_y_dim}"
-                        case_dir = CASE_DIR / case_name
-                        case_dir.mkdir(parents=True, exist_ok=True)
+                        case_dir = CASE_DIR
 
                         A = rng.random((M, N), dtype=np.float32)
                         x = rng.random((N,), dtype=np.float32)
