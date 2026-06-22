@@ -24,4 +24,8 @@ Implemented a Triton-based simulator for doing in-island quantizing GEMM operati
 ## Week3
 Implemented a test script for inspecting the accuracy of the triton GEMM quantization process
 
+After checking with supervisor a test script for comparing csl and triton GEMV results is needed. Implementation for that is finished, but quantization is not added.
+
+Implementing csl int quantization
+
 
