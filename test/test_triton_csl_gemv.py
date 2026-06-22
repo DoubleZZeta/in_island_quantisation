@@ -41,7 +41,8 @@ def can_run(M, N, kernel_x_dim, kernel_y_dim):
 def run_cerebras(case_dir, M, N, kernel_x_dim, kernel_y_dim):
     inputs_path = case_dir / "inputs.npz"
     y_cerebras_path = case_dir / "y_cerebras.npy"
-    out_dir = f"out_M{M}_N{N}_kx{kernel_x_dim}_ky{kernel_y_dim}"
+    #out_dir = f"out_M{M}_N{N}_kx{kernel_x_dim}_ky{kernel_y_dim}"
+    out_dir = "out"
 
     subprocess.run(
         [
@@ -62,13 +63,15 @@ def run_cerebras(case_dir, M, N, kernel_x_dim, kernel_y_dim):
     return np.load(y_cerebras_path)
 
 
-def run_triton(A, x, kernel_x_dim, kernel_y_dim):
+def run_triton(A, x, b, kernel_x_dim, kernel_y_dim):
     x_torch = torch.from_numpy(x).cuda()
     W_torch = torch.from_numpy(A.copy()).cuda()
+    b_torch = torch.from_numpy(b).cuda()
 
     y_torch, _ = triton_pe_gemv.triton_pe_gemv(
         x_torch,
         W_torch,
+        b_torch,
         pe_rows=kernel_y_dim,
         pe_cols=kernel_x_dim,
     )
@@ -105,7 +108,7 @@ def run_tests():
 
                         A = rng.random((M, N), dtype=np.float32)
                         x = rng.random((N,), dtype=np.float32)
-                        b = np.zeros((M,), dtype=np.float32)
+                        b = rng.random((M,), dtype=np.float32)
                         np.savez(case_dir / "inputs.npz", A=A, x=x, b=b)
 
                         print(f"Running {case_name}")
@@ -120,6 +123,7 @@ def run_tests():
                             y_triton = run_triton(
                                 A,
                                 x,
+                                b,
                                 kernel_x_dim,
                                 kernel_y_dim,
                             )

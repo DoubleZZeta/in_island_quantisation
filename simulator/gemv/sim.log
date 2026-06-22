@@ -15,36 +15,36 @@
 @0 sizeof(      exops_t):       6584 bytes
 @0 sizeof(hwtile_follow):     207840 bytes
 @0 dimX=15, dimY=10
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/generated/default.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/generated/coord.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_2_1.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_1_2.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_0_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_2_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_3_2.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_1_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_0_1.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_2_2.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_3_1.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_3_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_0_2.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/bin/out_1_1.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/east/bin/out_4_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/east/bin/out_0_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/east/bin/out_2_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/east/bin/out_1_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/east/bin/out_5_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/east/bin/out_3_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_6_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_4_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_0_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_2_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_1_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_5_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_7_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/west/bin/out_3_0.elf
-@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out_M24_N32_kx8_ky8/generated/MEMCPY_XY_ROUTES.elf
-@0 Invocation key is: simFDFD9B3F77B6AE907C00372941628AFC
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/generated/default.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/generated/coord.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_2_1.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_1_2.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_0_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_2_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_3_2.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_1_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_0_1.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_2_2.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_3_1.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_3_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_0_2.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/bin/out_1_1.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/east/bin/out_4_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/east/bin/out_0_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/east/bin/out_2_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/east/bin/out_1_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/east/bin/out_5_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/east/bin/out_3_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_6_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_4_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_0_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_2_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_1_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_5_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_7_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/west/bin/out_3_0.elf
+@0 Reading ELF file /home/aozhang/in_island_quantisation/simulator/gemv/out/generated/MEMCPY_XY_ROUTES.elf
+@0 Invocation key is: simB26B4F80E18AC4B42C7AD3AAB6C1000A
 @0 Plan key is: plan1E6F12DA4685CE245FA7C3D361A138CA
 @0 SimTraceCtf, flags:  wavelets=0 landing=1 inst=1 switch_positions=0 stalls=1
 @0 P0.0 (nul) tile trace flag: inst_trace,landing,stalls
@@ -253,7 +253,7 @@
 @0 Sim stats: tiles=200, simulated_tiles=112, hwtile=108, iotile=4, nultile=88
 @4697 No data movement in the last 50 cycles; stopping.
 @4697 50 cycles since an instruction was executed, 87 cycles since a wavelet landed
-@4697 Simulation used 1.44 seconds, init-time=0.06, total-time=1.50, cycles=4697, cyc/sec=3262.64, tile-cyc/sec=365416.11, tile-cyc/sec-thread=73083.22
+@4697 Simulation used 1.19 seconds, init-time=0.06, total-time=1.25, cycles=4697, cyc/sec=3943.94, tile-cyc/sec=441720.99, tile-cyc/sec-thread=88344.20
 @4697 CTF Stats: num_stalls_       =       846665
 @4697 CTF Stats: num_wavelets      =        25934
 @4697 CTF Stats: num_inst_dispatch =       149647
