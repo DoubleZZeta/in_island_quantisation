@@ -37,8 +37,6 @@ def precision_storage_dtype(precision):
 
 def quantize(x, precision="int8"):
     precision = normalize_precision(precision)
-    if precision == "fp32":
-        return x.to(torch.float32), None
     if precision == "fp16":
         return quantize_fp16(x), None
     return quantize_symmetric(x, num_bits=precision_num_bits(precision))
@@ -46,8 +44,6 @@ def quantize(x, precision="int8"):
 
 def dequantize(x, scale, precision="int8"):
     precision = normalize_precision(precision)
-    if precision == "fp32":
-        return x.to(torch.float32)
     if precision == "fp16":
         return dequantize_fp16(x)
     return dequantize_symmetric(x, scale)

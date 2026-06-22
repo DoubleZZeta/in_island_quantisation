@@ -98,7 +98,7 @@ def pe_reduce_kernel(
             other=0,
         )
         if QUANT_MODE == 3:
-            acc += vals.to(tl.float32)
+            acc += vals
         elif QUANT_MODE == 0:
             acc += q.dequantize_fp16_tl(vals)
         else:

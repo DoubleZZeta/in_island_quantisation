@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import simulator.triton_pe_gemv as triton_pe_gemv
+import simulator.triton_pe_gemv_new as triton_pe_gemv
 
 
 CASE_DIR = Path(__file__).resolve().parent / "gemv_case"
@@ -64,14 +64,13 @@ def run_cerebras(case_dir, M, N, kernel_x_dim, kernel_y_dim):
 
 def run_triton(A, x, kernel_x_dim, kernel_y_dim):
     x_torch = torch.from_numpy(x).cuda()
-    W_torch = torch.from_numpy(A.T.copy()).cuda()
+    W_torch = torch.from_numpy(A.copy()).cuda()
 
-    y_torch, _, _ = triton_pe_gemv.triton_pe_gemv(
+    y_torch, _ = triton_pe_gemv.triton_pe_gemv(
         x_torch,
         W_torch,
-        pe_rows=kernel_x_dim,
-        pe_cols=kernel_y_dim,
-        precision="fp32",
+        pe_rows=kernel_y_dim,
+        pe_cols=kernel_x_dim,
     )
 
     return y_torch.detach().cpu().numpy()

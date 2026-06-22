@@ -25,8 +25,13 @@ def quantized_pe_gemv(x, W, pe_rows=3, pe_cols=3, precision="int8"):
             col_end = min(col_start + n_per_pe, N)
 
             partial_fp = x[row_start:row_end].float() @ W[row_start:row_end, col_start:col_end].float()
-            partial_q, scale = q.quantize(partial_fp, precision)
-            y[col_start:col_end] += q.dequantize(partial_q, scale, precision)
+            if precision == "fp32":
+                partial_q = partial_fp
+                scale = None
+                y[col_start:col_end] += partial_q
+            else:
+                partial_q, scale = q.quantize(partial_fp, precision)
+                y[col_start:col_end] += q.dequantize(partial_q, scale, precision)
 
             partial_row.append(partial_q)
             if scale is not None:
