@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import simulator.triton_pe_gemm as triton_pe_gemm
+import simulator.triton_pe_gemm_new as triton_pe_gemm
 
 
 CASE_DIR = Path(__file__).resolve().parent / "gemm_case"
@@ -27,8 +27,10 @@ kernel_dims = [i for i in range(2,11)] # for x and y
 Ms = [i for i in range(16, 65, 16)]
 Ns = [i for i in range(16, 65, 16)]
 Ks = [i for i in range(16, 65, 16)]
-# Ms = [24]
-# Ns = [32]
+# kernel_dims = [2]
+# Ms = [2]
+# Ns = [24]
+# Ks = [16]
 
 def can_run(M, N, K, kernel_dim):
     if M % kernel_dim != 0 or N % kernel_dim != 0 or K % kernel_dim != 0:
@@ -69,7 +71,6 @@ def run_triton(A, B, kernel_dim):
         A_torch,
         B_torch,
         pe_dim=kernel_dim,
-        precision="fp32",
     )
 
     return y_torch.detach().cpu().numpy()
